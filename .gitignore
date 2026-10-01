@@ -1,0 +1,25 @@
+# 비밀 정보 (Clash of Clans API 키 등)
+.env
+.env.*
+
+# 개인정보: 마을 보유자(사람) 표, API 응답 수동 다운로드본
+data/owners.csv
+response_*.json
+
+# PC별 화면 좌표 캐시 (에뮬레이터 창 크기가 PC마다 다를 수 있음. 기본값은 extractor/layout.py)
+config/layout.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# 프로젝트 로컬 도구: 설치물은 제외하고 설정 파일만 추적
+tools/node/
+tools/appium/node_modules/
+tools/appium-home/
+tools/android-sdk/
+
+# 실행 결과, 로그
+output/
+logs/
