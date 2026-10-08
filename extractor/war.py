@@ -29,13 +29,13 @@ def power(gold: int | None, dark_elixir: int | None) -> int | None:
     return gold + dark_elixir * DARK_ELIXIR_WEIGHT
 
 
-def locate_bonus_boxes(img: np.ndarray) -> BonusBoxes:
+def locate_bonus_boxes(img: np.ndarray, column: tuple[int, int, int, int] | None = None) -> BonusBoxes:
     """패널에서 골드/엘릭서/다크 엘릭서 숫자 영역을 찾는다 (글자 위치 탐지, 한 번만 실행).
 
     숫자는 아이콘 쪽으로 오른쪽 정렬이므로, 오른쪽 끝이 열의 오른쪽에 붙은 영역만 쓰고
     자릿수가 달라도 들어가도록 세 줄의 왼쪽 끝을 가장 넓은 줄에 맞춘다.
     """
-    x1, y1, x2, y2 = BONUS_COLUMN
+    x1, y1, x2, y2 = column or BONUS_COLUMN
     scale, pad = 2, 40  # hud._white_text_mask의 확대 배율과 여백
     result = hud.detect(hud._white_text_mask(img[y1:y2, x1:x2]))
     rects = []

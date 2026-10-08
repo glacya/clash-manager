@@ -58,6 +58,16 @@ def current_war(tag: str | None = None) -> dict:
     return get(f"/clans/{urllib.parse.quote(tag or clan_tag(), safe='')}/currentwar")
 
 
+def league_group(tag: str | None = None) -> dict:
+    """현재 클랜전 리그 그룹: 참가 클랜 8개와 라운드별 전쟁 태그 (rounds[i].warTags)."""
+    return get(f"/clans/{urllib.parse.quote(tag or clan_tag(), safe='')}/currentwar/leaguegroup")
+
+
+def league_war(war_tag: str) -> dict:
+    """리그전 전쟁 하나 (rounds의 warTag). 아직 정해지지 않은 전쟁 태그는 '#0'."""
+    return get(f"/clanwarleagues/wars/{urllib.parse.quote(war_tag, safe='')}")
+
+
 def clan_members(tag: str | None = None) -> dict:
     """클랜원 목록. 각 멤버의 leagueTier(경쟁전 티어), townHallLevel 등."""
     return get(f"/clans/{urllib.parse.quote(tag or clan_tag(), safe='')}/members")

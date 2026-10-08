@@ -232,6 +232,50 @@ appium --address 127.0.0.1 --port 4723 --log logs\appium.log --log-no-colors   #
 - 어떤 산출물을 낼지는 리그전이 시작되면 사용자와 정함.
 - **리그전은 일반 클랜전과 UI가 다름** → 화면 수집 스크립트(`collect_war_bonus`, `collect_ally_loot`)의 좌표·흐름은 리그전 화면에서 다시 확인 필요. API도 리그전은 별도 엔드포인트(리그 그룹, 라운드별 전쟁 태그)를 쓸 가능성이 큼.
 
+### 클랜전 리그 API (2026-10-06 확인, `api.league_group`, `api.league_war`)
+
+- `GET /clans/{tag}/currentwar/leaguegroup` → `{state, season("2026-10-01"), clans[8], rounds[7]}`
+  - `clans[]`: `tag, name, clanLevel, badgeUrls, members[]` (members: `tag, name, townHallLevel` — 로스터 전체, 전쟁 참가 15명보다 많음. 우리 클랜 31명)
+  - `rounds[i].warTags`: 라운드마다 4개 (8클랜 → 4전쟁). 아직 정해지지 않은 라운드는 `"#0"` (2026-10-06 기준 6·7라운드).
+- `GET /clanwarleagues/wars/{warTag}` → 일반 currentwar와 거의 같은 구조: `state (preparation/inWar/warEnded), teamSize(15), preparationStartTime, startTime, endTime, warStartTime, clan, opponent`
+  - **`attacksPerMember` 없음** (리그전은 1). 우리 클랜이 `clan`일지 `opponent`일지 정해져 있지 않음 → 태그로 판별.
+  - members: `tag, name, townhallLevel, mapPosition, attacks[], opponentAttacks, bestOpponentAttack`; attack: `attackerTag, defenderTag, stars, destructionPercentage, order, duration`.
+- 한 라운드의 4개 전쟁 중 우리 전쟁을 찾으려면 각 warTag를 조회해 clan/opponent 태그 확인. 응답은 `output/api/leaguegroup_*.json`, `cwlwar_r{N}_*.json`.
+- 2026-10 시즌 상황: R1 40★ vs sagarmatha 31★ 승, R2 45 vs Pakistan 34 승, R3 41 vs Death Racers 43 패, R4 inWar (41 vs INDIAN CLASHER 30), R5 preparation (c.o.c. thailand), R6 다음 상대 ...FromAshes.
+
+### 클랜전 리그 화면 (2026-10-06 분석, 결과는 `output/cwl/`)
+
+- **한 화면에 아군(왼쪽, 1~15번)과 상대(오른쪽)가 함께** 있음 (일반 클랜전의 홈/적 전환 없음). 지도가 세로로 길어 스크롤 필요. **날짜를 바꾸면 지도 스크롤 위치가 달라져 마을 좌표가 고정되지 않음** → 마을 하나만 눌러 패널을 연 뒤 패널 화살표로 이동하는 방식 권장.
+- **하단 날짜 버튼 1~7** (y≈1000): x = 580, 708, 836, 963, 1092, 1220, 1348. 아이콘: 초록 체크(승), 빨간 체크(패), 칼(전투일), 톱니(준비일), 빈 버튼(미정). 선택된 날은 초록 버튼. **패널이 열려 있으면 날짜 버튼을 가리므로 빈 곳(예: (250, 280))을 눌러 닫은 뒤 탭.**
+- 날짜를 바꾼 직후 **상단 별 숫자가 올라가는 애니메이션**이 있음 (3초 후 28 → 8초 후 31). 화면 숫자를 읽을 거라면 충분히 기다릴 것. (성적은 API로 파악하므로 영향 없음)
+- **상대 패널**: 마을 이름, 남은 공격, 클랜의 최고 공격(+리플레이), **"전쟁 승리 보너스 X2"** — 골드/엘릭서/다크 숫자 열이 대략 (895~1000, 875~965)로 일반 클랜전 (865~1009)과 다름. 보너스는 **2배로 표기** → 전리품은 표기값 / 2. 공격!/정찰 버튼 위치는 일반 클랜전의 탭 금지 영역과 같음. 좌우 화살표 (565, 895)/(1355, 895)는 **같은 편(상대) 안에서만 이동**. 종료된 전쟁에서도 보너스 표시됨 (예: R1 1. tony boy 3,132,500 / 19,950 → 실제 1,566,250 / 9,975).
+- **아군 패널**: 받은 공격, 적의 최고 공격, 정찰 버튼. **정찰 버튼 위치가 상황에 따라 다름**: 전투 중 R4에서는 가운데 (965, 990) 하나, 종료된 R1에서는 (810, 990) + 리플레이 (1117, 990) → 초록색으로 찾아야 함. 화살표는 아군 안에서만 이동.
+- **준비일(R5)**: 상대 마을이 가려져 있음(표지판). **"멤버 변경" 버튼이 화면 가운데 아래(약 (1000, 880))에 있음 → 절대 탭 금지** (로스터 변경). 미정 라운드(R6)는 양쪽 모두 가려져 있음.
+- **정찰 화면**: 일반 클랜전과 같은 구성 (순번 1/15, 하단 화살표, 전쟁 지도 버튼). 상단에 "전쟁 종료" 표시만 추가.
+- 2026-10-06: 정찰 → 전쟁 지도 복귀 직후 `adb exec-out screencap`이 응답 없이 멈춤 (원인 미확인).
+
+### 클랜전 리그 스크립트 (2026-10-06 작성, 검증 중)
+
+- 사용자 확정 사항: 아군 전리품은 **라운드마다 다를 수 있어 매번 정찰**. 출전하지 않은 라운드는 공격권 없음(미사용 아님). **파워 수집은 7일차에 한 번 실행해 1~7일차를 모두 수집**, 성적 확정은 **리그 종료 후 API**로.
+- 아군 패널 정찰 버튼 위치: **공격을 받지 않았으면 가운데, 받았으면 왼쪽** (사용자 설명) → 초록색으로 찾음.
+- `extractor/cwl.py`: `fetch()` 리그 그룹 + 라운드별 우리 전쟁 → `output/cwl/<season>/api/leaguegroup.json, round<N>.json`. `normalize()`로 우리 클랜을 항상 `clan`, `attacksPerMember = 1`.
+- `extractor/collect_cwl.py [라운드...]`: 라운드마다 날짜 버튼(버튼 아래쪽 y=1030 탭: y≤1005는 상대 패널 탭 금지 영역과 겹침) → **가운데 돌길에서 아래로 3번 스와이프해 지도를 맨 위로**(그러면 날짜와 무관하게 아군 1번 ≈ (790, 700), 상대 1번 ≈ (1120, 690)) → 상대 패널 15개 촬영(보너스 ÷2, 숫자 열 (870, 865, 1008, 975)) → 아군 1번 패널 → 초록 정찰 버튼 → 15개 마을 `collect_ally_loot.process_village` → 전쟁 지도.
+  - 리그전 지도 맨 위에서는 패널 위 주황 탭(^)이 안 보임 → 패널 열림은 좌우 화살표 중 하나가 주황색인지로 판정.
+  - 정찰 화면 다음 화살표 (1190, 975)는 지도 패널 금지 영역과 좌표가 겹침 → 정찰 화면 안 탭은 `scout_tap`(금지 영역 검사 없음).
+  - 전쟁 지도로 복귀하면 현재 날짜로 돌아감.
+- `extractor/cwl_report.py`: 라운드별 `report/` (ally.csv, enemy.csv, ally_score.csv) + `ally_score_all.csv` + `person_score.csv`. 기본은 `warEnded` 라운드만 (`--include-inwar`로 진행 중 포함), `--no-fetch`로 저장된 API 사용.
+- **2026-10-06 검증 상황:** R1 상대 15개 수집 성공(신뢰도 낮음 0), 아군 #1 성공. 아군 #2에서 핀치(Appium `mobile: pinchCloseGesture`) 중 `socket hang up` → **에뮬레이터가 재부팅됨** (uptime 0분, 게임 꺼짐). 이전에도 정찰 → 지도 복귀 후 screencap이 멈춘 적 있음. 핀치 실패 시 축소 없이 계속하도록 `zoom_out` 수정. adb `input mouse scroll`로 축소하는 대안은 시험 전.
+
+### 에뮬레이터 종료 원인 분석 (2026-10-06)
+
+- 로그 위치: `%LOCALAPPDATA%\Google\Play Games Developer Emulator\Logs` (`Service.log`, `Service-bkup-*.log`, `AndroidSerial*.log`(게스트 logcat), `emulator_logs\gpu_*.log` 등). Windows 이벤트 로그(Application)에도 기록됨.
+- 12:35, 12:54 두 번 종료. **둘 다 `crosvm.exe`(에뮬레이터 VM 프로세스) 크래시**: Application Error 1000, `ntdll.dll`, 예외 코드 `0xc000000d`(STATUS_INVALID_PARAMETER).
+  - 12:54: 크래시한 것은 crosvm의 **GPU 프로세스** → Service가 "KiwiVM child process died (Gpu)" → unhealthy → 에뮬레이터 중지 후 재시작.
+  - 12:35: crosvm 종료 코드 `0xe180000d`, 서비스는 NormalExitShutdown으로 기록.
+- **OOM 아님:** 호스트 사용 가능 RAM 15.9GB, 커밋 85%(28.3/33.4GB), 페이징 10%. 게스트 logcat에 lowmemorykiller/oom-kill 기록 없음. Windows 디스플레이 드라이버 리셋(TDR) 기록도 없음.
+- 의심 요인: 에뮬레이터가 **NVIDIA 드라이버(32.0.15.9144, RTX 5050 Laptop)를 "UnstableDriverVersion"으로 표시**. Intel+NVIDIA 하이브리드 GPU 노트북. 게스트 RAM 6GB, 게임 실행 중 5초마다 `GuestPressureStallInformation`(자원 압박) 이벤트(오늘 550건). 두 크래시 모두 자동화(연속 screencap, 핀치) 중에 발생했지만 인과는 확인 못 함.
+- 사용자 방침: 나중에 실기기로 대체 예정 (adb만 사용 가능한 기기). 정찰 화면 축소는 휠로도 가능함을 사용자가 확인 (에뮬레이터). 실기기에서 `input mouse scroll`이 통할지는 미확인.
+
 ### 클랜전 리그 보너스 지급 (다음 과제)
 
 - 클랜 방침: **한 사람당 최대 1보너스** (여러 계정이 모두 우수해도). 계정별 성적 → 사람 단위로 묶어 종합 → 순위대로 (보너스 개수)명에게 지급. 다계정 클랜원이 어느 계정으로 받을지는 사전 조사하므로, 프로그램은 **수령 대상 사람**만 알려주면 됨.

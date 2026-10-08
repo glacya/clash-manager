@@ -47,11 +47,21 @@ OUT_DIR = device.ROOT / "output" / "ally_loot"
 
 
 def adb(*args) -> bytes:
-    return subprocess.run([str(device.ADB), "-s", UDID, *args], capture_output=True, check=True).stdout
+    # 화면 전환 중 screencap이 응답 없이 멈춘 적이 있어 타임아웃 후 한 번 재시도
+    for attempt in range(2):
+        try:
+            return subprocess.run([str(device.ADB), "-s", UDID, *args], capture_output=True, check=True,
+                                  timeout=20).stdout
+        except subprocess.TimeoutExpired:
+            if attempt:
+                raise
+            time.sleep(3)
 
 
 def shot() -> np.ndarray:
-    return device.screenshot_adb(UDID)
+    img = cv2.imdecode(np.frombuffer(adb("exec-out", "screencap", "-p"), np.uint8), cv2.IMREAD_COLOR)
+    layout.check_size(img)
+    return img
 
 
 def tap(x, y, wait=1.2):
@@ -103,11 +113,15 @@ def read_storage(img) -> dict | None:
 
 
 def zoom_out(driver):
-    for _ in range(2):
-        left, top, width, height = PINCH_AREA
-        driver.execute_script("mobile: pinchCloseGesture", {
-            "left": left, "top": top, "width": width, "height": height, "percent": 0.9, "speed": 2500})
-        time.sleep(0.4)
+    """정찰 화면 축소. 실패해도(UiAutomator2 연결 끊김 등) 수집은 계속한다 — 축소 없이도 TH 탐색은 대부분 됨."""
+    try:
+        for _ in range(2):
+            left, top, width, height = PINCH_AREA
+            driver.execute_script("mobile: pinchCloseGesture", {
+                "left": left, "top": top, "width": width, "height": height, "percent": 0.9, "speed": 2500})
+            time.sleep(0.4)
+    except Exception as e:  # noqa: BLE001
+        print(f"  ⚠️ 축소 실패, 그대로 진행: {str(e).splitlines()[0][:100]}", flush=True)
     time.sleep(0.8)
 
 
